@@ -113,7 +113,7 @@ assign {DDRAM_CLK, DDRAM_BURSTCNT, DDRAM_ADDR, DDRAM_DIN, DDRAM_BE, DDRAM_RD, DD
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
 
-assign LED_USER  = 0;
+assign LED_USER  = ioctl_download;
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
 
@@ -129,7 +129,7 @@ localparam CONF_STR = {
 	"-;",
 	"T6,Reset;",
 	"J,Kick,Start 1P,Start 2P;",
-	"V,v1.00.",`BUILD_DATE
+	"V,v2.00.",`BUILD_DATE
 };
 
 ////////////////////   CLOCKS   ///////////////////
@@ -158,6 +158,11 @@ end
 wire [31:0] status;
 wire  [1:0] buttons;
 
+wire        ioctl_download;
+wire        ioctl_wr;
+wire [24:0] ioctl_addr;
+wire  [7:0] ioctl_dout;
+
 wire [64:0] ps2_key;
 
 wire [15:0] joystick_0, joystick_1;
@@ -172,6 +177,11 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 	.buttons(buttons),
 	.status(status),
+
+	.ioctl_download(ioctl_download),
+	.ioctl_wr(ioctl_wr),
+	.ioctl_addr(ioctl_addr),
+	.ioctl_dout(ioctl_dout),
 
 	.joystick_0(joystick_0),
 	.joystick_1(joystick_1),
@@ -243,7 +253,7 @@ assign HDMI_DE  = status[2] ? VGA_DE : rde;
 assign HDMI_HS  = status[2] ? VGA_HS : rhs;
 assign HDMI_VS  = status[2] ? VGA_VS : rvs;
 
-screen_rotate #(296,224,8) screen_rotate
+screen_rotate #(289,224,8) screen_rotate
 (
 	.clk_in(clk_sys),
 	.ce_in(ce_vid),
@@ -263,23 +273,27 @@ assign AUDIO_L = {audio, audio};
 assign AUDIO_R = AUDIO_L;
 assign AUDIO_S = 0;
 
-pacman_machine pacman
+pengo pengo
 (
-	.video_r(r),
-	.video_g(g),
-	.video_b(b),
-	.hsync(hs),
-	.vsync(vs),
-	.h_blank(hblank),
-	.v_blank(vblank),
+	.O_VIDEO_R(r),
+	.O_VIDEO_G(g),
+	.O_VIDEO_B(b),
+	.O_HSYNC(hs),
+	.O_VSYNC(vs),
+	.O_HBLANK(hblank),
+	.O_VBLANK(vblank),
 
-	.audio(audio),
+	.dn_addr(ioctl_addr[15:0]),
+	.dn_data(ioctl_dout),
+	.dn_wr(ioctl_wr),
 
-	.in0_reg(~{m_fire, 2'b00,m_coin,m_right,m_left,m_down,m_up}),
-	.in1_reg(~{1'b0, m_start2, m_start1, 5'b00000}),
+	.O_AUDIO(audio),
 
-	.dipsw1_reg(8'b11100000),
-	.dipsw2_reg(8'b11001100),
+	.in0(~{m_fire, 2'b00,m_coin,m_right,m_left,m_down,m_up}),
+	.in1(~{1'b0, m_start2, m_start1, 5'b00000}),
+
+	.dipsw1(8'b11100000),
+	.dipsw2(8'b11001100),
 
 	.reset(RESET | status[0] | status[6] | buttons[1]),
 	.clk(clk_sys),

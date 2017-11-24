@@ -3,14 +3,13 @@ use ieee.std_logic_1164.all,ieee.numeric_std.all;
 
 entity PROM4_DST is
 port (
-	clk  : in  std_logic;
-	addr : in  std_logic_vector(9 downto 0);
+	addr : in  std_logic_vector(8 downto 0);
 	data : out std_logic_vector(7 downto 0)
 );
 end entity;
 
 architecture prom of PROM4_DST is
-	type rom is array(0 to  1023) of std_logic_vector(7 downto 0);
+	type rom is array(0 to  511) of std_logic_vector(7 downto 0);
 	signal rom_data: rom := (
 		X"00",X"00",X"00",X"00",X"00",X"05",X"03",X"01",X"00",X"05",X"02",X"01",X"00",X"05",X"06",X"01",
 		X"00",X"05",X"07",X"01",X"00",X"05",X"0A",X"01",X"00",X"05",X"0B",X"01",X"00",X"05",X"0C",X"01",
@@ -43,44 +42,7 @@ architecture prom of PROM4_DST is
 		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
 		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
 		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"07",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"0D",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",
-		X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"07",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",
-		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"0D");
+		X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00",X"0F",X"00");
 begin
-process(clk)
-begin
-	if rising_edge(clk) then
-		data <= rom_data(to_integer(unsigned(addr)));
-	end if;
-end process;
+	data <= rom_data(to_integer(unsigned(addr)));
 end architecture;
