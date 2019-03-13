@@ -351,9 +351,6 @@ set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:sys/build_id.tcl"
 
 set_global_assignment -name CDF_FILE jtag.cdf
 set_global_assignment -name QIP_FILE sys/sys.qip
-set_global_assignment -name VHDL_FILE ROM/PROM7_DST.vhd
-set_global_assignment -name VHDL_FILE ROM/PROM4_DST.vhd
-set_global_assignment -name VHDL_FILE ROM/PROM1_DST.vhd
 set_global_assignment -name VHDL_FILE cpu/T80sed.vhd
 set_global_assignment -name VHDL_FILE cpu/T80_Reg.vhd
 set_global_assignment -name VHDL_FILE cpu/T80_Pack.vhd
