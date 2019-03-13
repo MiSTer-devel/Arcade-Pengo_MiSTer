@@ -87,14 +87,22 @@ assign HDMI_ARY = status[1] ? 8'd9  : status[2] ? 8'd3 : 8'd1;
 `include "build_id.v" 
 localparam CONF_STR = {
 	"A.PENGO;;",
+	"F,rom;", // allow loading of alternate ROMs
 	"-;",
 	"O1,Aspect Ratio,Original,Wide;",
 	"O2,Orientation,Vert,Horz;",
-	"O34,Scanlines(vert),No,25%,50%,75%;",
+	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",  
 	"-;",
-	"T6,Reset;",
+	"O89,Lives,2,3,4,5;",
+	"OA,Bonus,30000,50000;",
+	"OC,Cabinet,Upright,Cocktail;",
+	"OD,Demo Sounds,On,Off;",
+	"OE,Test,Off,On;",
+	"OFG,Difficulty,Easy,Medium,Hard,Hardest;",
+	"-;",
+	"R0,Reset;",
 	"J,Kick,Start 1P,Start 2P;",
-	"V,v2.00.",`BUILD_DATE
+	"V,v",`BUILD_DATE
 };
 
 ////////////////////   CLOCKS   ///////////////////
@@ -122,6 +130,7 @@ end
 
 wire [31:0] status;
 wire  [1:0] buttons;
+wire        forced_scandoubler;
 
 wire        ioctl_download;
 wire        ioctl_wr;
@@ -142,6 +151,7 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 	.buttons(buttons),
 	.status(status),
+	.forced_scandoubler(forced_scandoubler),
 
 	.ioctl_download(ioctl_download),
 	.ioctl_wr(ioctl_wr),
@@ -170,6 +180,16 @@ always @(posedge clk_sys) begin
 
 			'h005: btn_one_player  <= pressed; // F1
 			'h006: btn_two_players <= pressed; // F2
+			// JPAC/IPAC/MAME Style Codes
+			'h016: btn_start_1     <= pressed; // 1
+			'h01E: btn_start_2     <= pressed; // 2
+			'h02E: btn_coin_1      <= pressed; // 5
+			'h036: btn_coin_2      <= pressed; // 6
+			'h02D: btn_up_2        <= pressed; // R
+			'h02B: btn_down_2      <= pressed; // F
+			'h023: btn_left_2      <= pressed; // D
+			'h034: btn_right_2     <= pressed; // G
+			'h01C: btn_fire_2      <= pressed; // A
 		endcase
 	end
 end
@@ -188,6 +208,22 @@ wire m_left   = status[2] ? btn_down  | joy[2] : btn_left  | joy[1];
 wire m_right  = status[2] ? btn_up    | joy[3] : btn_right | joy[0];
 wire m_fire   = btn_fire | joy[4];
 
+wire m_up_2     = status[2] ? btn_left_2  | joy[1] : btn_up_2    | joy[3];
+wire m_down_2   = status[2] ? btn_right_2 | joy[0] : btn_down_2  | joy[2];
+wire m_left_2   = status[2] ? btn_down_2  | joy[2] : btn_left_2  | joy[1];
+wire m_right_2  = status[2] ? btn_up_2    | joy[3] : btn_right_2 | joy[0];
+wire m_fire_2  = btn_fire_2;
+
+reg btn_start_1=0;
+reg btn_start_2=0;
+reg btn_coin_1=0;
+reg btn_coin_2=0;
+reg btn_up_2=0;
+reg btn_down_2=0;
+reg btn_left_2=0;
+reg btn_right_2=0;
+reg btn_fire_2=0;
+
 wire m_start1 = btn_one_player  | joy[5];
 wire m_start2 = btn_two_players | joy[6];
 wire m_coin   = m_start1 | m_start2;
@@ -195,49 +231,61 @@ wire m_coin   = m_start1 | m_start2;
 wire hblank, vblank;
 wire ce_vid = ce_6m;
 wire hs, vs;
-wire rde, rhs, rvs;
-wire [2:0] r,g,rr,rg;
-wire [1:0] b,rb;
+wire [2:0] r,g;
+wire [1:0] b;
 
-assign VGA_CLK  = clk_sys;
-assign VGA_CE   = ce_vid;
-assign VGA_R    = {r,r,r[2:1]};
-assign VGA_G    = {g,g,g[2:1]};
-assign VGA_B    = {b,b,b,b};
-assign VGA_DE   = ~(hblank | vblank);
-assign VGA_HS   = hs;
-assign VGA_VS   = vs;
-
-assign HDMI_CLK = VGA_CLK;
-assign HDMI_CE  = status[2] ? VGA_CE : 1'b1;
-assign HDMI_R   = status[2] ? VGA_R  : {rr,rr,rr[2:1]};
-assign HDMI_G   = status[2] ? VGA_G  : {rg,rg,rg[2:1]};
-assign HDMI_B   = status[2] ? VGA_B  : {rb,rb,rb,rb};
-assign HDMI_DE  = status[2] ? VGA_DE : rde;
-assign HDMI_HS  = status[2] ? VGA_HS : rhs;
-assign HDMI_VS  = status[2] ? VGA_VS : rvs;
-assign HDMI_SL  = status[2] ? 2'd0   : status[4:3];
-
-screen_rotate #(289,224,8) screen_rotate
+arcade_rotate_fx #(289,224,8) arcade_video
 (
-	.clk_in(clk_sys),
-	.ce_in(ce_vid),
-	.video_in({r,g,b}),
-	.hblank(hblank),
-	.vblank(vblank),
+	.*,
 
-	.clk_out(clk_sys),
-	.video_out({rr,rg,rb}),
-	.hsync(rhs),
-	.vsync(rvs),
-	.de(rde)
+	.clk_video(clk_sys),
+	.ce_pix(ce_vid),
+
+	.RGB_in({r,g,b}),
+	.HBlank(hblank),
+	.VBlank(vblank),
+	.HSync(hs),
+	.VSync(vs),
+	
+	.fx(status[5:3]),
+	.no_rotate(status[2])
 );
+
 
 wire [7:0] audio;
 assign AUDIO_L = {audio, audio};
 assign AUDIO_R = AUDIO_L;
 assign AUDIO_S = 0;
 
+//wire [7:0]m_dip = {status[10] , status[9:8],2'b01,1'b1,status[13],status[14]};
+// 30k, no cocktail, no rack test, 5 penguin:
+// wire [7:0]m_dip = { 1'b1, 1'b1, 1'b1, 1'b0, 1'b0,1'b0,1'b0,1'b0};
+// 50k, no cocktail, no rack test, 5 penguin:
+// wire [7:0]m_dip = { 1'b1, 1'b1, 1'b1, 1'b0, 1'b0,1'b0,1'b0,1'b1};
+// 30/50, cocktail, no rack test, 5 penguin:
+//wire [7:0]m_dip = { 1'b1, 1'b1, 1'b1, 1'b0, 1'b0,1'b1,1'b1,status[10]};
+
+/*
+| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|ON |   |   |   |   |   |   |   | Bonus - 30,000*
+|OFF|   |   |   |   |   |   |   | Bonus - 50,000
+|   |ON |   |   |   |   |   |   | Demo Sounds - ON*
+|   |OFF|   |   |   |   |   |   | Demo Sounds - OFF
+|   |   |ON |   |   |   |   |   | Cabinet - Upright*
+|   |   |OFF|   |   |   |   |   | Cabinet - Cocktail
+|   |   |   |OFF|OFF|   |   |   | Lives - 2
+|   |   |   |ON |OFF|   |   |   | Lives - 3*
+|   |   |   |OFF|ON |   |   |   | Lives - 4
+|   |   |   |ON |ON |   |   |   | Lives - 5
+|   |   |   |   |   |OFF|   |   | Rack Test - Off*
+|   |   |   |   |   |ON |   |   | Rack Test - On
+|   |   |   |   |   |   |OFF|OFF| Difficulty - Easy
+|   |   |   |   |   |   |ON |OFF| Difficulty - Medium * 
+|   |   |   |   |   |   |OFF|ON | Difficulty - Hard
+|   |   |   |   |   |   |ON |ON | Difficulty - Hardest
+*/
+
+wire [7:0]m_dip = { ~status[16:15], ~status[14],~status[9:8],status[12],status[13],status[10]};
 pengo pengo
 (
 	.O_VIDEO_R(r),
@@ -254,13 +302,18 @@ pengo pengo
 
 	.O_AUDIO(audio),
 
-	.in0(~{m_fire, 2'b00,m_coin,m_right,m_left,m_down,m_up}),
-	.in1(~{1'b0, m_start2, m_start1, 5'b00000}),
+	.in0(~{m_fire,1'b0,btn_coin_1, m_coin|btn_coin_2, m_right,m_left,m_down,m_up}),
+	.in1(~{m_fire_2, m_start2|btn_start_2, m_start1|btn_start_1,1'b0,m_right_2,m_left_2,m_down_2,m_up_2}),
 
-	.dipsw1(8'b11100000),
+	.dipsw1(m_dip),
+
+	//.in0(~{m_fire, 2'b00,m_coin,m_right,m_left,m_down,m_up}),
+	//.in1(~{1'b0, m_start2, m_start1, 5'b00000}),
+
+	//.dipsw1(8'b11100000),
 	.dipsw2(8'b11001100),
 
-	.reset(RESET | status[0] | status[6] | buttons[1]),
+	.reset(RESET | status[0] | buttons[1]|ioctl_download),
 	.clk(clk_sys),
 	.ena_6(ce_6m)
 );
