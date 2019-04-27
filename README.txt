@@ -19,6 +19,14 @@
 --   SPACE,CTRL  : Kick
 --   UP,DOWN,LEFT,RIGHT arrows : Movements
 --
+-- MAME/IPAC/JPAC Style Keyboard inputs:
+--   5           : Coin 1
+--   6           : Coin 2
+--   1           : Start 1 Player
+--   2           : Start 2 Players
+--   R,F,D,G     : Player 2 Movements
+--   A           : Player 2 Kick
+--
 -- Joystick support.
 -- 
 ---------------------------------------------------------------------------------

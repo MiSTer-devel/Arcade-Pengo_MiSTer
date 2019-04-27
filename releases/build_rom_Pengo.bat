@@ -1,7 +1,8 @@
 @echo off
 
-set    zip=pengojpm.zip
-set ifiles=ep1689c.8+ep1690b.7+ep1691b.15+ep1692b.14+ep1693b.21+ep1694b.20+ep5118b.32+ep5119c.31+ep1640.92+ep1695.105
+set    zip=pengo.zip
+set ifiles=ep1689c.8+ep1690b.7+ep1691b.15+ep1692b.14+ep1693b.21+ep1694b.20+ep5118b.32+ep5119c.31+ep1640.92+ep1695.105+pr1634.88+pr1635.51+pr1636.70+pr1633.78
+
 set  ofile=a.pengo.rom
 
 rem =====================================
