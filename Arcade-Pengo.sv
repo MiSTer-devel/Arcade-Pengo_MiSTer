@@ -100,8 +100,8 @@ assign HDMI_ARY = status[1] ? 8'd9  : status[2] ? 8'd3 : 8'd4;
 `include "build_id.v" 
 localparam CONF_STR = {
 	"A.PENGO;;",
-	"O1,Aspect Ratio,Original,Wide;",
-	"O2,Orientation,Vert,Horz;",
+	"H0O1,Aspect Ratio,Original,Wide;",
+	"H0O2,Orientation,Vert,Horz;",
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",  
 	"-;",
 	"O89,Lives,2,3,4,5;",
@@ -112,26 +112,28 @@ localparam CONF_STR = {
 	"OFG,Difficulty,Easy,Medium,Hard,Hardest;",
 	"-;",
 	"R0,Reset;",
-	"J1,Kick,Start 1P,Start 2P;",
+	"J1,Kick,Start 1P,Start 2P,Coin;",
+	"jn,A,Start,Select,R;",
 	"V,v",`BUILD_DATE
 };
 
 ////////////////////   CLOCKS   ///////////////////
 
-wire clk_sys, clk_snd;
+wire clk_sys, clk_48;
 wire pll_locked;
 
 pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
-	.outclk_0(clk_sys),
+	.outclk_0(clk_48),
+	.outclk_1(clk_sys),
 	.locked(pll_locked)
 );
 
 reg ce_6m;
 always @(posedge clk_sys) begin
-	reg [1:0] div;
+	reg [2:0] div;
 	
 	div <= div + 1'd1;
 	ce_6m <= !div;
@@ -142,6 +144,8 @@ end
 wire [31:0] status;
 wire  [1:0] buttons;
 wire        forced_scandoubler;
+wire        direct_video;
+
 
 wire        ioctl_download;
 wire        ioctl_wr;
@@ -165,8 +169,10 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 	.buttons(buttons),
 	.status(status),
+	.status_menumask(direct_video),
 	.forced_scandoubler(forced_scandoubler),
 	.gamma_bus(gamma_bus),
+	.direct_video(direct_video),
 
 	.ioctl_download(ioctl_download),
 	.ioctl_wr(ioctl_wr),
@@ -193,8 +199,8 @@ always @(posedge clk_sys) begin
 			'h029: btn_fire        <= pressed; // space
 			'h014: btn_fire        <= pressed; // ctrl
 
-			'h005: btn_one_player  <= pressed; // F1
-			'h006: btn_two_players <= pressed; // F2
+			'h005: btn_start_1 <= pressed; // F1
+			'h006: btn_start_2 <= pressed; // F2
 			// JPAC/IPAC/MAME Style Codes
 			'h016: btn_start_1     <= pressed; // 1
 			'h01E: btn_start_2     <= pressed; // 2
@@ -214,19 +220,19 @@ reg btn_down  = 0;
 reg btn_right = 0;
 reg btn_left  = 0;
 reg btn_fire  = 0;
-reg btn_one_player  = 0;
-reg btn_two_players = 0;
 
-wire m_up     = status[2] ? btn_left  | joy[1] : btn_up    | joy[3];
-wire m_down   = status[2] ? btn_right | joy[0] : btn_down  | joy[2];
-wire m_left   = status[2] ? btn_down  | joy[2] : btn_left  | joy[1];
-wire m_right  = status[2] ? btn_up    | joy[3] : btn_right | joy[0];
+wire no_rotate = status[2] & ~direct_video;
+
+wire m_up     = btn_up    | joy[3];
+wire m_down   = btn_down  | joy[2];
+wire m_left   = btn_left  | joy[1];
+wire m_right  = btn_right | joy[0];
 wire m_fire   = btn_fire | joy[4];
 
-wire m_up_2     = status[2] ? btn_left_2  | joy[1] : btn_up_2    | joy[3];
-wire m_down_2   = status[2] ? btn_right_2 | joy[0] : btn_down_2  | joy[2];
-wire m_left_2   = status[2] ? btn_down_2  | joy[2] : btn_left_2  | joy[1];
-wire m_right_2  = status[2] ? btn_up_2    | joy[3] : btn_right_2 | joy[0];
+wire m_up_2     = btn_up_2    | joy[3];
+wire m_down_2   = btn_down_2  | joy[2];
+wire m_left_2   = btn_left_2  | joy[1];
+wire m_right_2  = btn_right_2 | joy[0];
 wire m_fire_2  = btn_fire_2;
 
 reg btn_start_1=0;
@@ -239,31 +245,40 @@ reg btn_left_2=0;
 reg btn_right_2=0;
 reg btn_fire_2=0;
 
-wire m_start1 = btn_one_player  | joy[5];
-wire m_start2 = btn_two_players | joy[6];
-wire m_coin   = m_start1 | m_start2;
+wire m_start1 = btn_start_1 | joy[5];
+wire m_start2 = btn_start_2| joy[6];
+wire m_coin   = btn_coin_1 | joy[7];
 
 wire hblank, vblank;
-wire ce_vid = ce_6m;
+//wire ce_vid = ce_6m;
 wire hs, vs;
 wire [2:0] r,g;
 wire [1:0] b;
 
-arcade_rotate_fx #(289,224,8) arcade_video
+reg ce_pix;
+always @(posedge clk_48) begin
+       reg [3:0] div;
+
+       div <= div + 1'd1;
+       ce_pix <= !div;
+end
+
+
+arcade_video #(289,224,8) arcade_video
 (
 	.*,
 
-	.clk_video(clk_sys),
-	.ce_pix(ce_vid),
+	.clk_video(clk_48),
+	//.ce_pix(ce_6m),
 
 	.RGB_in({r,g,b}),
 	.HBlank(hblank),
 	.VBlank(vblank),
 	.HSync(hs),
 	.VSync(vs),
-	
-	.fx(status[5:3]),
-	.no_rotate(status[2])
+
+	.rotate_ccw(0),
+	.fx(status[5:3])
 );
 
 
@@ -317,8 +332,8 @@ pengo pengo
 
 	.O_AUDIO(audio),
 
-	.in0(~{m_fire,1'b0,btn_coin_1, m_coin|btn_coin_2, m_right,m_left,m_down,m_up}),
-	.in1(~{m_fire_2, m_start2|btn_start_2, m_start1|btn_start_1,1'b0,m_right_2,m_left_2,m_down_2,m_up_2}),
+	.in0(~{m_fire,1'b0,m_coin,btn_coin_2, m_right,m_left,m_down,m_up}),
+	.in1(~{m_fire_2, m_start2, m_start1,1'b0,m_right_2,m_left_2,m_down_2,m_up_2}),
 
 	.dipsw1(m_dip),
 
