@@ -133,7 +133,7 @@ pll pll
 
 reg ce_6m;
 always @(posedge clk_sys) begin
-	reg [2:0] div;
+	reg [1:0] div;
 	
 	div <= div + 1'd1;
 	ce_6m <= !div;
@@ -221,7 +221,7 @@ reg btn_right = 0;
 reg btn_left  = 0;
 reg btn_fire  = 0;
 
-wire no_rotate = status[2] & ~direct_video;
+wire no_rotate = status[2] | direct_video;
 
 wire m_up     = btn_up    | joy[3];
 wire m_down   = btn_down  | joy[2];
@@ -250,26 +250,16 @@ wire m_start2 = btn_start_2| joy[6];
 wire m_coin   = btn_coin_1 | joy[7];
 
 wire hblank, vblank;
-//wire ce_vid = ce_6m;
 wire hs, vs;
 wire [2:0] r,g;
 wire [1:0] b;
-
-reg ce_pix;
-always @(posedge clk_48) begin
-       reg [3:0] div;
-
-       div <= div + 1'd1;
-       ce_pix <= !div;
-end
-
 
 arcade_video #(289,224,8) arcade_video
 (
 	.*,
 
 	.clk_video(clk_48),
-	//.ce_pix(ce_6m),
+	.ce_pix(ce_6m),
 
 	.RGB_in({r,g,b}),
 	.HBlank(hblank),
