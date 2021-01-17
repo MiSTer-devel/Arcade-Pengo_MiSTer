@@ -1,5 +1,3 @@
-set_global_assignment -name FAMILY "Cyclone V"
-set_global_assignment -name DEVICE AUTO
 # --------------------------------------------------------------------------
 #
 # MiSTer project
