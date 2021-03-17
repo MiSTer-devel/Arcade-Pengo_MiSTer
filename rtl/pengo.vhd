@@ -77,7 +77,16 @@ entity PENGO is
 		--
 		RESET      : in  std_logic;
 		CLK        : in  std_logic;
-		ENA_6      : in  std_logic
+		ENA_6      : in  std_logic;
+
+		pause      : in std_logic;
+
+		hs_address  : in  std_logic_vector(11 downto 0);
+		hs_data_out : out std_logic_vector(7 downto 0);
+		hs_data_in  : in  std_logic_vector(7 downto 0);
+		hs_write    : in std_logic;
+		hs_access   : in std_logic
+
 	);
 end;
 
@@ -140,6 +149,12 @@ architecture RTL of PENGO is
 	-- watchdog
 	signal watchdog_cnt     : std_logic_vector(3 downto 0);
 	signal watchdog_reset_l : std_logic;
+
+	-- hiscore
+	signal u_rams_addr_b    : std_logic_vector(11 downto 0);
+	signal u_rams_we_b      : std_logic;
+	signal u_rams_data_b    : std_logic_vector(7 downto 0);
+	signal u_rams_q_b       : std_logic_vector(7 downto 0);
 
 begin
   
@@ -220,6 +235,8 @@ begin
 		-- note sync reset
 		if (reset = '1') then
 			watchdog_cnt <= "1111";
+		elsif (pause = '1') then
+			watchdog_cnt <= "0000";
 		elsif (iodec_wdr_l = '0') then
 			watchdog_cnt <= "0000";
 		elsif rising_vblank then
@@ -241,7 +258,7 @@ port map
 	RESET_n => watchdog_reset_l and (not reset),
 	CLK_n   => clk,
 	CLKEN   => hcnt(0) and ena_6,
-	WAIT_n  => sync_bus_wreq_l,
+	WAIT_n  => sync_bus_wreq_l and (not pause),
 	INT_n   => cpu_int_l,
 	NMI_n   => '1',
 	BUSRQ_n => '1',
@@ -371,19 +388,28 @@ port map (
 
 ram_cs <= '1' when cpu_addr(15 downto 12) = X"8" else '0';
 
+-- Hiscore mux
+u_rams_addr_b <= hs_address when (hs_access='1') else vram_addr(11 downto 0);
+u_rams_we_b <= hs_write;
+u_rams_data_b <= hs_data_in;
+hs_data_out <= u_rams_q_b;
+vram_data <= u_rams_q_b;
+
 u_rams : work.dpram generic map (12,8)
 port map
 (
 	clock_a   => clk,
 	enable_a  => ena_6,
-	wren_a    => not sync_bus_r_w_l and ram_cs,
+	wren_a    => (not sync_bus_r_w_l and ram_cs),
 	address_a => cpu_addr(11 downto 0),
 	data_a    => cpu_data_out, -- cpu only source of ram data
 	q_a       => ram_data,
 
 	clock_b   => clk,
-	address_b => vram_addr(11 downto 0),
-	q_b       => vram_data
+	wren_b    => u_rams_we_b,
+	address_b => u_rams_addr_b,
+	data_b    => u_rams_data_b, -- cpu only source of ram data
+	q_b       => u_rams_q_b
 );
 
 --

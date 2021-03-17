@@ -29,6 +29,8 @@
 --
 -- Joystick support.
 -- 
+-- High score save/load - To save your scores use the 'Save Settings' option in the OSD.  
+--
 ---------------------------------------------------------------------------------
 
                                 *** Attention ***
