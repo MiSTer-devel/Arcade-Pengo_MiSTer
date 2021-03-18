@@ -9,4 +9,5 @@ set_global_assignment -name VHDL_FILE rtl/sega_decode.vhd
 set_global_assignment -name VHDL_FILE rtl/pacman_audio.vhd
 set_global_assignment -name VHDL_FILE rtl/pengo_video.vhd
 set_global_assignment -name VHDL_FILE rtl/pengo.vhd
+set_global_assignment -name SYSTEMVERILOG_FILE "rtl/hiscore.sv"
 set_global_assignment -name SYSTEMVERILOG_FILE "Arcade-Pengo.sv"

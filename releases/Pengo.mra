@@ -25,4 +25,11 @@
 		<part crc="77245b66" name="pr1636.70"/>
 		<part crc="3a5844ec" name="pr1633.78"/>
 	</rom>
+	<rom index="3" md5="none">
+		<part>
+		00 00 88 40 00 1E D0 41
+		00 00 88 0C 00 02 D0 07
+		</part>
+	</rom>
+	<nvram index="4" size="32"/>
 </misterromdescription>
