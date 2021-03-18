@@ -63,6 +63,9 @@ entity PENGO is
 		O_VSYNC    : out std_logic;
 		O_HBLANK   : out std_logic;
 		O_VBLANK   : out std_logic;
+		flip_screen : in std_logic;
+		h_offset    : in std_logic_vector(7 downto 0);
+		v_offset    : in std_logic_vector(7 downto 0);
 		--
 		O_AUDIO    : out std_logic_vector(7 downto 0);
 		--
@@ -97,7 +100,11 @@ architecture RTL of PENGO is
 	signal hcnt             : std_logic_vector(8 downto 0) := "010000000"; -- 80
 	signal vcnt             : std_logic_vector(8 downto 0) := "011111000"; -- 0F8
 
-	signal do_hsync         : boolean;
+	signal hcnt_offset      : std_logic_vector(8 downto 0);
+	signal vcnt_offset      : std_logic_vector(8 downto 0);
+	signal c_flip           : std_logic;
+
+	signal do_vcnt_check    : boolean;
 	signal hsync            : std_logic;
 	signal vsync            : std_logic;
 	signal hblank           : std_logic;
@@ -171,7 +178,7 @@ begin
 			hcnt <= hcnt +"1";
 		end if;
 		-- hcnt 8 on circuit is 256H_L
-		if do_hsync then
+		if do_vcnt_check then
 			if vcnt = "111111111" then
 				vcnt <= "011111000"; -- 0F8
 			else
@@ -181,8 +188,9 @@ begin
 	end if;
 end process;
 
-vsync <= not vcnt(8);
-do_hsync <= (hcnt = "010101111"); -- 0AF
+vcnt_offset <= vcnt + v_offset;
+vsync <= not vcnt_offset(8);
+do_vcnt_check <= (hcnt = "010101111"); -- 0AF
 
 p_sync : process
 begin
@@ -199,13 +207,13 @@ begin
 			hblank <= '0';
 		end if;
 
-		if do_hsync then
+		if (hcnt = "010101111" + h_offset) then -- 0AF
 			hsync <= '1';
-		elsif (hcnt = "011001111") then -- 0CF
+		elsif (hcnt = "011001111" + h_offset) then -- 0CF
 			hsync <= '0';
 		end if;
 
-		if do_hsync then
+		if do_vcnt_check then
 			if (vcnt = "111101111") then -- 1EF
 				vblank <= '1';
 			elsif (vcnt = "100001111") then -- 10F
@@ -223,7 +231,7 @@ p_irq_req_watchdog : process
 begin
 	wait until rising_edge(clk);
 	if (ena_6 = '1') then
-		rising_vblank := do_hsync and (vcnt = "111101111"); -- 1EF
+		rising_vblank := do_vcnt_check and (vcnt = "111101111"); -- 1EF
 
 		if (control_reg(0) = '0') then
 			cpu_int_l <= '1';
@@ -416,9 +424,11 @@ port map
 -- video subsystem
 --
 
+c_flip <= control_reg(3) xor flip_screen;
+
 -- vram addr custom ic
-hp <= hcnt(7 downto 3) when control_reg(3) = '0' else not hcnt(7 downto 3);
-vp <= vcnt(7 downto 3) when control_reg(3) = '0' else not vcnt(7 downto 3);
+hp <= hcnt(7 downto 3) when control_reg(3) = flip_screen else not hcnt(7 downto 3);
+vp <= vcnt(7 downto 3) when control_reg(3) = flip_screen else not vcnt(7 downto 3);
 vram_addr <= '0' & hcnt(2) & vp & hp when hcnt(8)='1' else
              x"FF" & hcnt(6 downto 4) & hcnt(2) when hblank = '1' else
              '0' & hcnt(2) & hp(3) & hp(3) & hp(3) & hp(3) & hp(0) & vp;
@@ -432,7 +442,7 @@ port map
 	address_a => cpu_addr(3 downto 0),
 	data_a    => cpu_data_out,
 
-	clock_b   => CLK,		
+	clock_b   => CLK,
 	address_b => vram_addr(3 downto 0),
 	q_b       => sprite_xy_data
 );
@@ -443,14 +453,15 @@ port map
 	I_HCNT    => hcnt,
 	I_VCNT    => vcnt,
 	I_PS      => control_reg(7) & control_reg(6) & control_reg(2),
-
+	flip_screen => flip_screen,
 	--
 	vram_data => vram_data,
+	vram_addr => vram_addr,
 	sprite_xy => sprite_xy_data,
 	--
 	I_HBLANK  => hblank,
 	I_VBLANK  => vblank,
-	I_FLIP    => control_reg(3),
+	I_FLIP    => c_flip,
 	O_HBLANK  => O_HBLANK,
 	--
 	dn_addr   => dn_addr,
@@ -487,7 +498,7 @@ port map (
 	dn_addr   => dn_addr,
 	dn_data   => dn_data,
 	dn_wr     => dn_wr,
-	--		
+	--
 	O_AUDIO       => O_AUDIO,
 	ENA_6         => ena_6,
 	CLK           => clk

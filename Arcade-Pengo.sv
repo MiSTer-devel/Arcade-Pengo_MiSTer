@@ -154,12 +154,15 @@ assign VIDEO_ARX = (!ar) ? ((status[2] ) ? 8'd4 : 8'd3) : (ar - 1'd1);
 assign VIDEO_ARY = (!ar) ? ((status[2] ) ? 8'd3 : 8'd4) : 12'd0;
 
 
-`include "build_id.v" 
+`include "build_id.v"
 localparam CONF_STR = {
 	"A.PENGO;;",
 	"H0OJK,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"H0O2,Orientation,Vert,Horz;",
-	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",  
+	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
+	"O7,Flip Screen,Off,On;",
+	"OQS,CRT Hsync Adjust,0,1,2,3,4,5,6,7;",
+	"OTV,CRT Vsync Adjust,0,1,2,3,4,5,6,7;",
 	"-;",
 	"O89,Lives,2,3,4,5;",
 	"OA,Bonus,30000,50000;",
@@ -191,7 +194,7 @@ pll pll
 reg ce_6m;
 always @(posedge clk_sys) begin
 	reg [1:0] div;
-	
+
 	div <= div + 1'd1;
 	ce_6m <= !div;
 end
@@ -202,6 +205,7 @@ wire [31:0] status;
 wire  [1:0] buttons;
 wire        forced_scandoubler;
 wire        direct_video;
+
 
 wire        ioctl_download;
 wire        ioctl_upload;
@@ -345,7 +349,7 @@ assign AUDIO_S = 0;
 |   |   |   |   |   |OFF|   |   | Rack Test - Off*
 |   |   |   |   |   |ON |   |   | Rack Test - On
 |   |   |   |   |   |   |OFF|OFF| Difficulty - Easy
-|   |   |   |   |   |   |ON |OFF| Difficulty - Medium * 
+|   |   |   |   |   |   |ON |OFF| Difficulty - Medium *
 |   |   |   |   |   |   |OFF|ON | Difficulty - Hard
 |   |   |   |   |   |   |ON |ON | Difficulty - Hardest
 */
@@ -353,6 +357,7 @@ assign AUDIO_S = 0;
 wire reset = RESET | status[0] | buttons[1] | ioctl_download;
 wire rom_download = ioctl_download & !ioctl_index;
 wire [7:0]m_dip = { ~status[16:15], ~status[14],~status[9:8],status[12],status[13],status[10]};
+
 pengo pengo
 (
 	.O_VIDEO_R(r),
@@ -362,6 +367,10 @@ pengo pengo
 	.O_VSYNC(vs),
 	.O_HBLANK(hblank),
 	.O_VBLANK(vblank),
+
+	.flip_screen(status[7]),
+	.h_offset(status[28:26]),
+	.v_offset(status[31:29]),
 
 	.dn_addr(ioctl_addr[15:0]),
 	.dn_data(ioctl_dout),
@@ -388,7 +397,6 @@ pengo pengo
 	.hs_access(hs_access),
 
 	.pause(pause)
-	
 );
 
 // HISCORE SYSTEM
