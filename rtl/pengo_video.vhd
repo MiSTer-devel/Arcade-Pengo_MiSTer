@@ -133,7 +133,7 @@ begin
 prom_cs <= '1' when dn_addr(15 downto 14) = "11" else '0';
 gfx_cs  <= '1' when dn_addr(15 downto 14) = "10" else '0';
 
-xy <= not sprite_xy when flip_screen = '0' else sprite_xy - 15 when vram_addr(0) = '0' else sprite_xy - 18;
+xy <= not sprite_xy when flip_screen = '0' else sprite_xy - 15 when vram_addr(0) = '0' else sprite_xy - 17;
 dr <= xy when I_HBLANK = '1' else "11111111"; -- pull ups on board
 
 
