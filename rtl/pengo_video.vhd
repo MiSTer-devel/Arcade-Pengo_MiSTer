@@ -56,7 +56,10 @@ entity PENGO_VIDEO is
 		I_VCNT    : in  std_logic_vector(8 downto 0);
 		I_PS      : in  std_logic_vector( 2 downto 0);
 		--
+		flip_screen : in  std_logic;
+		--
 		vram_data : in  std_logic_vector(7 downto 0);
+		vram_addr : in  std_logic_vector(11 downto 0);
 		sprite_xy : in  std_logic_vector(7 downto 0);
 		--
 		I_HBLANK  : in  std_logic;
@@ -79,6 +82,7 @@ end;
 architecture RTL of PENGO_VIDEO is
 
 	signal dr                 : std_logic_vector(7 downto 0);
+	signal xy                 : std_logic_vector(7 downto 0);
 
 	signal char_reg           : std_logic_vector(7 downto 0);
 	signal char_sum_reg       : std_logic_vector(3 downto 0);
@@ -129,7 +133,9 @@ begin
 prom_cs <= '1' when dn_addr(15 downto 14) = "11" else '0';
 gfx_cs  <= '1' when dn_addr(15 downto 14) = "10" else '0';
 
-dr <= not sprite_xy when I_HBLANK = '1' else "11111111"; -- pull ups on board
+xy <= not sprite_xy when flip_screen = '0' else sprite_xy - 15 when vram_addr(0) = '0' else sprite_xy - 17;
+dr <= xy when I_HBLANK = '1' else "11111111"; -- pull ups on board
+
 
 p_char_regs : process
 	variable sum : std_logic_vector(8 downto 0);
@@ -158,8 +164,8 @@ begin
 	end if;
 end process;
 
-xflip <= I_FLIP when char_hblank_reg = '0' else sprite_data(1);
-yflip <= I_FLIP when char_hblank_reg = '0' else sprite_data(0);
+xflip <= I_FLIP when char_hblank_reg = '0' else sprite_data(1) xor flip_screen;
+yflip <= I_FLIP when char_hblank_reg = '0' else sprite_data(0) xor flip_screen;
 
 obj_on <= char_match_reg or I_HCNT(8); -- 256h not 256h_l
 
@@ -211,7 +217,7 @@ end process;
 shift_sel(0) <= I_HCNT(0) and I_HCNT(1) when vout_yflip = '0' else '1';
 shift_sel(1) <= '1'                     when vout_yflip = '0' else I_HCNT(0) and I_HCNT(1);
 shift_op(0)  <= shift_regl(3)           when vout_yflip = '0' else shift_regl(0);
-shift_op(1)  <= shift_regu(3)           when vout_yflip = '0' else shift_regu(0);           
+shift_op(1)  <= shift_regu(3)           when vout_yflip = '0' else shift_regu(0);
 
 p_video_out_reg : process
 begin
@@ -241,8 +247,8 @@ port map
 		wren_a    => dn_wr and rom4a_cs and prom_cs,
 		address_a => dn_addr(8 downto 0),
 		data_a    => dn_data,
-	
-	   clock_b   => CLK,
+
+		clock_b   => CLK,
 		address_b(8)          => I_PS(1),
 		address_b(7)          => '0',
 		address_b(6 downto 2) => vout_db(4 downto 0),
@@ -251,7 +257,7 @@ port map
   );
 
 
-  
+
 u_sprite_ram : work.dpram generic map (8,6)
 port map
 (
@@ -289,7 +295,7 @@ sprite_ram_ip <= (others => '0') when vout_hblank_t1 = '0' else
 					  lut_4a_t1(3 downto 0) & shift_op_t1;
 
 final_col <= (others => '0') when (vout_hblank = '1') or (I_VBLANK = '1') else
-				 sprite_ram_reg(5 downto 2) when video_op_sel = '1' else 
+				 sprite_ram_reg(5 downto 2) when video_op_sel = '1' else
 				 lut_4a(3 downto 0);
 
 -- assign video outputs from color LUT PROM
@@ -303,7 +309,7 @@ final_col <= (others => '0') when (vout_hblank = '1') or (I_VBLANK = '1') else
 		wren_a    => dn_wr and rom7_cs and prom_cs,
 		address_a => dn_addr(4 downto 0),
 		data_a    => dn_data,
-	
+
 		clock_b               => CLK,
 		address_b(4)          =>  I_PS(0),
 		address_b(3 downto 0) =>  final_col,
