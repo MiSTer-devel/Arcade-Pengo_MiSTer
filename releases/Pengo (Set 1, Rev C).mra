@@ -49,10 +49,11 @@
 	<rom index="2"></rom>
 	<rom index="3" md5="none">
 		<part>
-				00 00 88 40 00 1E D0 41
-				00 00 88 0C 00 02 D0 07
-				</part>
-		</rom>
+		00 00 4E 20 00 FF 00 02 00 02 00 01 00 FF 02 00
+		00 00 88 40 00 1E D0 41
+		00 00 88 0C 00 02 D0 07
+		</part>
+	</rom>
 	<rom index="4"></rom>
 
 	<nvram index="4" size="32"></nvram>
